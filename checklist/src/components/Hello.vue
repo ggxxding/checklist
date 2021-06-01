@@ -1,22 +1,26 @@
 <template>
   <div>
-    <el-upload class="upload" drag action="/test" multiple ref="upload" style="text-align:center"
-               list-type="file"
-               :show-file-list="false"
-               :http-request="httpRequest">
-      <i class="el-icon-upload"></i>
-      <div class="el-upload__text">将待检测图片拖到此处，或<em>点击上传</em></div>
-      <div class="el-upload__tip" slot="tip">上传成功后点击下面的检测按钮：</div>
-    </el-upload>
-
     <el-row>
-      <el-col :span="8"><div class="grid-content bg-purple"> </div></el-col>
-      <el-col :span="16">
+      <el-form :inline="true" :model="formInline" class="demo-form-inline">
+        <el-form-item label="模板">
+          <el-input v-model="formInline.template" placeholder="请输入模板"></el-input>
+        </el-form-item>
+        <el-form-item label="生成数量">
+          <el-input v-model="formInline.number" placeholder="10"></el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="onSubmit">生成</el-button>
+        </el-form-item>
+      </el-form>
+    </el-row>
+    <el-row>
+      <el-col :span="24">
         <div class="grid-content bg-purple-light">
         <el-transfer
         filterable
         :filter-method="filterMethod"
-        filter-placeholder="请输入城市拼音"
+        filter-placeholder="请输入搜索内容"
+        :titles="['待选用例','测试用例']"
         v-model="value"
         :data="data">
       </el-transfer>
@@ -28,15 +32,15 @@
 
 </template>
 
-<script >
+<script>
   import axios from 'axios';
   export default {
     name: 'Hello',
     data() {
       const generateData = _ => {
         const data = [];
-        const cities = ['上海', '北京', '广州', '深圳', '南京', '西安', '成都'];
-        const pinyin = ['shanghai', 'beijing', 'guangzhou', 'shenzhen', 'nanjing', 'xian', 'chengdu'];
+        const cities = [];
+        const pinyin = [];
         cities.forEach((city, index) => {
           data.push({
             label: city,
@@ -47,39 +51,62 @@
         return data;
       };
       return {
+        url:"http://192.168.71.214:5000/template",
+        formInline:{
+          template:'',
+          number:'10',
+        },
         data: generateData(),
         value: [],
+        count: 0,
         filterMethod(query, item) {
           return item.pinyin.indexOf(query) > -1;
         }
       };
     },
     methods: {
-      httpRequest(param) {
-        console.log(param);
-        let fileObj = param.file; // 相当于input里取得的files
-        let data = new FormData(); // FormData 对象
-        let extension = fileObj.name.substring(fileObj.name.lastIndexOf('.') + 1)
-        let size = fileObj.size / 1024 / 1024
+      onSubmit(){
+        console.log('submit');
+        axios({
+          method:'post',
+          url:this.url,
+          data: {'template': this.formInline.template,
+          'number': this.formInline.number},
+        })
+        .then((response)=>{
+          for (var i=this.data.length-1; i>=0; i-=1){
+            var flag=0;
+            for (var j=this.value.length-1; j>=0; j-=1){
+              if (this.value[j]==this.data[i].key){
+                console.log(this.value[j],' ',this.data[i].key)
+                flag=1;
+                break;
+              }
+            }
+            if (flag==0){
+              console.log('del:',i)
+              this.data.splice(i,1);
+            }
+          }
 
-          data.append("file", fileObj); // 文件对象
-          //data.append("name", this.regeditForm.name);
-          //data.append("description", this.regeditForm.description);
-          axios({
-            method: 'POST',
-            url: this.url,
-            data: data,
-            headers: {'Content-Type': 'multipart/form-data'}
-          }).then(res => {
-              this.$message.success("文件上传成功");
-              this.picurl=res.data;
-              console.log(this.acc_text)
-              console.log(res);
-            }).catch((error) => {
-            // eslint-disable-next-line
-            console.error(error);
+          console.log(response.data)
+          for (var i in response.data){
+            this.data.push({
+              label:response.data[i],
+              key:this.count,
+              pinyin:response.data[i],
+            })
+            this.count+=1
+          }
+          console.log(this.count)
+        })
+        .catch((error)=>{
+          console.log(error)
+          this.$notify.warning({
+            title: '警告',
+            message: `输出异常`
           });
-
+        })
       },
     },
     components:{
@@ -89,7 +116,13 @@
 
 </script>
 <style>
-
+  .el-transfer-panel{
+    width:40%;
+  }
+  .el-transfer__buttons{
+    width:15%;
+    text-align:center;
+  }
   .el-row {
     margin-bottom: 20px;
   &:last-child {
@@ -105,9 +138,7 @@
   .bg-purple {
     background: #d3dce6;
   }
-  .bg-purple-light {
-    background: #e5e9f2;
-  }
+
   .grid-content {
     border-radius: 4px;
     min-height: 36px;
