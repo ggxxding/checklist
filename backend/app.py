@@ -4,8 +4,14 @@ import os, json
 import argparse
 
 from checklist.editor import Editor
+from checklist.test_types import MFT,INV,DIR
+from checklist.expect import Expect
+from checklist.test_suite import TestSuite
+from checklist.perturb import Perturb
 import numpy as np
+
 editor = Editor(language='chinese')
+suite=TestSuite()
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = r"./uploadFiles"
@@ -33,93 +39,58 @@ def template():
             res_dict[str(i)]=res[i]
         return jsonify(res_dict)
 
-
-@app.route('/uploadFile', methods=['POST'])
-def upload():
+@app.route('/getSuggestion', methods=['POST'])
+def getSuggestion():
     if request.method == 'POST':
-        # name = request.form.get("name")
-        # description = request.form.get("description")
-        file = request.files.get("file")
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp.json")
-        file.save(file_path)
-        # print(name)
-        # print(description)
-        data = json.loads(open(file_path, 'r').read())  # type = dict
-        jsondata = {}
-        jsondata['article'] = data['article']
-        jsondata['options'] = data['options']
-        jsondata['answers'] = data['answers']
-        # print(data)
-        # print(data['article'])
-        # print(data['answers'])
-        os.remove(file_path)
-        return jsondata
+        data = request.get_json(silent=True)
+        res = editor.suggest(data['template'])[:int(data['number'])]
+        res_dict={}
+        for i in range(len(res)):
+            res_dict[str(i)]=res[i]
+        return jsonify(res_dict)
 
-
-@app.route('/clozeTest', methods=['POST'])
-def clozeTest():
+@app.route('/loadLexicons', methods=['POST', 'GET'])
+def loadLexicons():
+    if request.method == 'GET':
+        # get请求是网上复制的代码，没修改过，目前只使用POST
+        graph = request.read_json("static/data/miserables.json")
+        return graph
     if request.method == 'POST':
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp.json")
-        model = request.form.get("model")
-        data = {}
-        data["article"] = request.form.get("article")
-        data["mask"] = request.form.get("mask")
-        tempOps = request.form.get("options").strip()[3:-3]
-        tempOps = tempOps.split('"],["')
-        for i, j in enumerate(tempOps):
-            tempOps[i] = tempOps[i].split('","')
-        data["options"] = tempOps
-        data["includeAnswer"] = request.form.get("includeAnswer")
-        includeAnswer = data["includeAnswer"]
-        # 不包含正确答案则不输出准确率
-        if (data["includeAnswer"] == "1"):
-            tempAns = request.form.get("answers").strip()[2:-2]
-            tempAns = tempAns.split('","')
-            data["answers"] = tempAns
-        json_str = json.dumps(data, indent=4)
-        with open(file_path, 'w') as json_file:
-            json_file.write(json_str)
+        tempDict=dict(editor.lexicons)
+        for key in ['country_city','female_from','first_pronoun','last_from','male_from']:
+            del(tempDict[key])
+        return jsonify(tempDict)
+        #return jsonify(res_dict)
 
-        parser = argparse.ArgumentParser()
-        args = parser.parse_args()
-        args.data_dir = './uploadFiles/'
-        args.pre = args.post = 0
-        args.bert_model = model
-        args.save_name = './data/{}-'.format('valid') + args.bert_model + '.pt'
-        args.mask = data["mask"]
-        args.includeAnswer = includeAnswer
-        data = data_util_bert.Preprocessor(args)
+@app.route('/addLexicon', methods=['POST'])
+def addLexicon():
+    if request.method == 'POST':
+        data = request.get_json(silent=True)
+        print(data['key'])
+        print(data['lexiconList'])
+        lexiconList=data['lexiconList'][1:-1].split(',')
+        editor.add_lexicon(data['key'],lexiconList, overwrite=True)
 
-        parser = argparse.ArgumentParser()
-        args = parser.parse_args()
-        args.data_dir = './data'
-        args.bert_model = model
-        args.task_name = 'cloth'
-        args.output_dir = './output'
-        args.do_train = False
-        args.do_eval = True
-        args.train_batch_size = 4
-        args.cache_size = 256
-        args.eval_batch_size = 1
-        args.learning_rate = 5e-5
-        args.num_train_epochs = 3.0
-        args.num_log_steps = 10
-        args.warmup_proportion = 0.1
-        args.no_cuda = False
-        args.local_rank = -1
-        args.seed = 42
-        args.gradient_accumulation_steps = 1
-        args.optimize_on_cpu = False
-        args.fp16 = False
-        args.loss_scale = 128
-        args.includeAnswer = includeAnswer
+        tempDict=dict(editor.lexicons)
+        for key in ['country_city','female_from','first_pronoun','last_from','male_from']:
+            del(tempDict[key])
+        return jsonify(tempDict)
 
-        acc, ans = main_bert.main(args)
-        acc = str(acc * 100) + '%'
-        data = {'acc': acc, 'ans': ans}
+@app.route('/addTestSuite', methods=['POST'])
+def addTestSuite():
+    if request.method == 'POST':
+        data = request.get_json(silent=True)
+        type_=data['type']
+        name=data['name']
+        labels=data['labels']
+        capability=data['capability']
+        description=data['description']
+        sentences=data['sentences']
+        if type_=='MFT':
+            print(sentences)
+            print(type(sentences))
 
-        return data
-
+        return jsonify(tempDict)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
