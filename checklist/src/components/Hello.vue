@@ -250,6 +250,7 @@
         console.log(tab, event);
       },
       clearTemplates(){
+        
         this.templateForm={
           template:'',
           templates:[],
