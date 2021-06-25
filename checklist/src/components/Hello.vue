@@ -4,12 +4,16 @@
       title="测试用例清单"
       :visible.sync="drawer"
     size="50%">
-      <el-table :data="suiteData">
-        <el-table-column property="test" label="类型" width="150"></el-table-column>
-        <el-table-column property="name" label="名称" width="200"></el-table-column>
-        <el-table-column property="capability" label="能力/功能"></el-table-column>
-        <el-table-column property="description" label="描述"></el-table-column>
-      </el-table>
+      <el-button type='primary' @click="downloadSuite"  style="margin-left:4%;margin-right:4%">导出并下载</el-button>
+      <el-collapse v-model="activeNames" style="margin-left:4%;margin-right:4%">
+        <el-collapse-item  v-for="(suite,index) in suiteData" :key="index" :title="suite.name" :name="index">
+          <div>类型:{{suite.type}}</div>
+          <div>功能:{{suite.capability}}</div>
+          <div>描述:{{suite.description}}</div>
+          <div>标签:{{suite.labels}}</div>
+          <div>数据:{{suite.data}}</div>
+        </el-collapse-item>
+      </el-collapse>
     </el-drawer>
     <el-dialog title="测试用例详情" :visible.sync="dialogFormVisible">
       <el-form :model="suiteForm">
@@ -23,8 +27,18 @@
         <el-form-item label="名称" >
           <el-input v-model="suiteForm.name" autocomplete="off"></el-input>
         </el-form-item>
-        <el-form-item label="标签" >
+        <el-form-item v-show="suiteForm.type=='MFT'" label="标签" >
           <el-input v-model="suiteForm.label" autocomplete="off" placeholder="请输入半角阿拉伯数字"></el-input>
+        </el-form-item>
+        <el-form-item label="变化方向" v-show="suiteForm.type=='DIR'" >
+          <el-select v-model="suiteForm.direction" placeholder="请选择">
+            <el-option label="正向" value="increasing"></el-option>
+            <el-option label="负向" value="decreasing"></el-option>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="变化阈值" v-show="suiteForm.type=='DIR'" >
+          <el-input v-model="suiteForm.tolerance" ></el-input>
         </el-form-item>
         <el-form-item label="功能" >
           <el-input v-model="suiteForm.capability" autocomplete="off"></el-input>
@@ -38,26 +52,29 @@
         <el-button type="primary" @click="addTestSuite()">确 定</el-button>
       </div>
     </el-dialog>
-    <el-row>
-
-      <el-divider></el-divider>
-      <el-form :inline="true" :model="formInline" class="demo-form-inline">
-        <el-form-item label="模板">
-          <el-input v-model="formInline.template" placeholder="请输入模板"></el-input>
+    <el-dialog title="模板查询(请勿在构建测试用例中途修改语句数)" :visible.sync="templateFormVisible">
+      <el-form  :model="templateForm" label-width="100px" class="demo-dynamic">
+        <el-form-item  label="模板">
+          <el-input v-model="templateForm.template"></el-input>
         </el-form-item>
-        <el-form-item label="生成数量">
-          <el-input v-model="formInline.number" placeholder="10"></el-input>
+        <el-form-item  v-for="(template, index) in templateForm.templates"
+                       :label="'模板' + (Number(index)+2)"
+                       :key="template.key">
+          <el-input v-model="template.value"></el-input><el-button @click.prevent="removeTemplate(template)">删除</el-button>
+        </el-form-item>
+        <el-form-item label="数量">
+          <el-input v-model="templateForm.number"></el-input>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="onSubmit">生成模板</el-button>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="getSuggestion">MASK建议</el-button>
-        </el-form-item>
-        <el-form-item style="float:right">
-          <el-button type="primary" @click="drawer = true" >查看当前测试用例</el-button>
+          <el-button type="primary" @click="onSubmit()">查询模板</el-button>
+          <el-button type="primary" @click="getSuggestion()">MASK建议</el-button>
+          <el-button @click="addTemplate()">增加模板</el-button>
+          <el-button @click="resetTemplateForm()">重置</el-button>
         </el-form-item>
       </el-form>
+    </el-dialog>
+    <el-row>
+
     </el-row>
 
     <el-row>
@@ -69,7 +86,10 @@
         filter-placeholder="请输入搜索内容"
         :titles="['待选用例','测试用例']"
         v-model="value"
-        :data="data">
+        :data="data"
+        @mouseover.native="transferAddTitle">
+          <el-button class="transfer-footer" slot="left-footer" size="middle" @click="templateFormVisible = true">增加数据</el-button>
+          <el-button class="transfer-footer" slot="right-footer" size="middle" @click="clearTemplates">清空数据</el-button>
       </el-transfer>
         </div>
       </el-col>
@@ -77,19 +97,25 @@
     <el-row>
       <el-form :inline="true"  class="demo-form-inline" style="float:right">
         <el-form-item>
+          <el-button type="primary" @click="clearTemplates" >清空</el-button>
+        </el-form-item>
+        <el-form-item>
           <el-button type="primary" @click="dialogFormVisible = true" >增加测试用例</el-button>
+        </el-form-item>
+        <el-form-item>
+          <el-button type="primary" @click="drawer = true" >查看测试用例</el-button>
         </el-form-item>
       </el-form>
     </el-row>
     <el-divider></el-divider>
     <el-row>
       <div style="margin-bottom: 20px;">
-        <el-form :inline="true" :model="formInline" class="demo-form-inline">
+        <el-form :inline="true" :model="lexiconForm" class="demo-form-inline">
           <el-form-item label="词汇表名称">
             <el-input v-model="lexiconForm.key"  placeholder="例:country"></el-input>
           </el-form-item>
           <el-form-item label="词汇表内容">
-            <el-input type="textarea" :autosize="{ minRows: 1, maxRows: 8}" v-model="lexiconForm.lexiconList" placeholder='例: ["good","great"](英文标点符号、引号用双引号)'></el-input>
+            <el-input type="textarea" :autosize="{ minRows: 1, maxRows: 8}" v-model="lexiconForm.lexiconList" placeholder='例: [good,great](英文逗号)'></el-input>
           </el-form-item>
           <el-form-item>
             <el-button type="primary"
@@ -97,7 +123,7 @@
           </el-form-item>
         </el-form>
       </div>
-      <el-tabs v-model="activeName" type="border-card" @tab-click="handleClick">
+      <el-tabs v-model="lexiconsActiveName" type="border-card" @tab-click="handleClick">
         <el-tab-pane v-for="(item,index) in lexicons" :key="item.key" :label="item.key">
           <div v-for="(item2,index2) in item">
             <div v-if="typeof item2 =='object'">
@@ -119,15 +145,6 @@
     data() {
       const generateData = _ => {
         const data = [];
-        const cities = [];
-        const pinyin = [];
-        cities.forEach((city, index) => {
-          data.push({
-            label: city,
-            key: index,
-            pinyin: pinyin[index]
-          });
-        });
         return data;
       };
 
@@ -157,13 +174,13 @@
 
       return {
         drawer: false,
+        templateFormVisible: false,
         dialogFormVisible: false,
-        suiteData: [{
-          name:'ste',
-        }],
+        suiteData: {},
         url:"http://192.168.71.214:5000/",
-        formInline:{
+        templateForm:{
           template:'',
+          templates: [],
           number:'10',
         },
         lexiconForm:{
@@ -172,21 +189,23 @@
         },
         suiteForm:{
           type:'',
+          direction:'',
+          tolerance:'0.1',
           name:'',
           label:'',
           description:'',
           capability:'',
         },
         data: generateData(),
-        lexicons: generateLexicons(),
-        activeNames: ['1'],
         value: [],
         count: 0,
         filterMethod(query, item) {
-          return item.pinyin.indexOf(query) > -1;
-        }
+          return item.sentence.indexOf(query) > -1;
+        },
+        lexicons: generateLexicons(),
+        lexiconsActiveName:'0',
+        activeNames: ['1'],
       };
-
     },
     methods: {
       getLexicons(){
@@ -212,9 +231,40 @@
             });
           })
       },
+      addTemplate() {
+        this.templateForm.templates.push({
+          value: '',
+          key: Date.now()
+        });
+      },
+      resetTemplateForm(){
+
+      },
+      removeTemplate(item) {
+        var index = this.templateForm.templates.indexOf(item)
+        if (index !== -1) {
+          this.templateForm.templates.splice(index, 1)
+        }
+      },
       handleClick(tab, event) {
         console.log(tab, event);
       },
+      clearTemplates(){
+        this.templateForm={
+          template:'',
+          templates:[],
+            number:'10',
+        }
+        this.data=[]
+        this.value=[]
+        this.count=0
+      },
+      transferAddTitle(e){
+        let dom = e.target;
+        if (dom.title) return;
+        dom.title = dom.innerText;
+      },
+
       addLexicon() {
         const tempLexicon=[]
         axios({
@@ -231,8 +281,7 @@
           }
           this.lexicons=tempLexicon;
           this.$message.success("成功添加词汇表");
-        })
-          .catch((error)=>{
+        }).catch((error)=>{
             console.log(error)
             this.$notify.warning({
               title: '警告',
@@ -240,40 +289,41 @@
             });
           })
       },
-      handleChange(val) {
-        console.log(val);
-      },
       addTestSuite(){
         console.log(this.data)
         console.log(this.value)
-        //保留data[value],删除data未选中内容
-        for (var i=this.data.length-1; i>=0; i-=1){
-          var flag=0;
-          for (var j=this.value.length-1; j>=0; j-=1){
-            if (this.value[j]==this.data[i].key){
-              console.log(this.value[j],' ',this.data[i].key)
-              flag=1;
-              break;
-            }
-          }
-          if (flag==0){
-            console.log('del:',i)
-            this.data.splice(i,1);
-          }
+        console.log(this.suiteData)
+        for (var a in this.suiteData){
+          console.log(a,typeof(a))
+          console.log(this.suiteData[a])
+          console.log(this.suiteData.a)
         }
+        //保留data[value],删除data未选中内容
         axios({
           method:'post',
           url:this.url+'addTestSuite',
           data: {'type': this.suiteForm.type,
+            'direction': this.suiteForm.direction,
+            'tolerance': this.suiteForm.tolerance,
             'name': this.suiteForm.name,
             'labels': this.suiteForm.label,
             'capability': this.suiteForm.capability,
           'description': this.suiteForm.description,
           'sentences': this.data,
+            'value': this.value,
+            'number': this.templateForm.templates.length+1,
           },
         }).then((response)=>{
-
-          this.$message.success("成功添加测试");
+          this.$message.success("成功添加测试，可以点击”查看当前测试用例“按钮查看");
+          console.log(response.data);
+          this.suiteData=response.data;
+          this.suiteForm={
+            type:'',
+            name:'',
+            label:'',
+            description:'',
+            capability:'',
+          };
         })
           .catch((error)=>{
             console.log(error)
@@ -284,38 +334,69 @@
           })
       },
       onSubmit(){
-        console.log('submit');
         axios({
           method:'post',
           url:this.url+'template',
-          data: {'template': this.formInline.template,
-          'number': this.formInline.number},
+          data: {'template': this.templateForm.template,
+            'templates': this.templateForm.templates,
+          'number': this.templateForm.number},
         })
         .then((response)=>{
-          for (var i=this.data.length-1; i>=0; i-=1){
-            var flag=0;
-            for (var j=this.value.length-1; j>=0; j-=1){
-              if (this.value[j]==this.data[i].key){
-                console.log(this.value[j],' ',this.data[i].key)
-                flag=1;
-                break;
+          console.log(response.data)
+          console.log(this.templateForm.templates.length)
+          console.log(typeof(response.data[0]))
+          if (this.templateForm.templates.length==0) {
+            for (var i = this.data.length - 1; i >= 0; i -= 1) {
+              var flag = 0;
+              for (var j = this.value.length - 1; j >= 0; j -= 1) {
+                if (this.value[j] == this.data[i].key) {
+                  console.log(this.value[j], ' ', this.data[i].key)
+                  flag = 1;
+                  break;
+                }
+              }
+              if (flag == 0) {
+                console.log('del:', i)
+                this.data.splice(i, 1);
               }
             }
-            if (flag==0){
-              console.log('del:',i)
-              this.data.splice(i,1);
+            console.log(response.data)
+            for (var i in response.data) {
+              this.data.push({
+                label: this.count.toString()+":"+response.data[i],
+                key: this.count,
+                sentence: response.data[i],
+              })
+              this.count += 1
+            }
+            console.log(this.count)
+          }else{
+            for (var i = this.data.length - 1; i >= 0; i -= 1) {
+              var flag = 0;
+              for (var j = this.value.length - 1; j >= 0; j -= 1) {
+                if (this.value[j] == this.data[i].key) {
+                  console.log(this.value[j], ' ', this.data[i].key)
+                  flag = 1;
+                  break;
+                }
+              }
+              if (flag == 0) {
+                console.log('del:', i)
+                this.data.splice(i, 1);
+              }
+            }
+            for (var i in response.data) {
+              for (var j=0;j<=this.templateForm.templates.length;j+=1) {
+                this.data.push({
+                  label: (this.count-j).toString() + ":" + response.data[i][j],
+                  key: this.count,
+                  sentence: response.data[i][j],
+                })
+                this.count += 1
+              }
+
             }
           }
-          console.log(response.data)
-          for (var i in response.data){
-            this.data.push({
-              label:response.data[i],
-              key:this.count,
-              pinyin:response.data[i],
-            })
-            this.count+=1
-          }
-          console.log(this.count)
         })
         .catch((error)=>{
           console.log(error)
@@ -330,8 +411,8 @@
         axios({
           method:'post',
           url:this.url+'getSuggestion',
-          data: {'template': this.formInline.template,
-            'number': this.formInline.number},
+          data: {'template': this.templateForm.template,
+            'number': this.templateForm.number},
         })
           .then((response)=>{
             for (var i=this.data.length-1; i>=0; i-=1){
@@ -351,15 +432,38 @@
             console.log(response.data)
             for (var i in response.data){
               this.data.push({
-                label:response.data[i],
+                label:this.count.toString()+':'+response.data[i],
                 key:this.count,
-                pinyin:response.data[i],
+                sentence:response.data[i],
               })
               this.count+=1
             }
             console.log(this.count)
           })
           .catch((error)=>{
+            console.log(error)
+            this.$notify.warning({
+              title: '警告',
+              message: `输出异常`
+            });
+          })
+      },
+      downloadSuite(){
+        axios({
+          method:'post',
+          url:this.url+'downloadSuite',
+        })
+          .then((response)=>{
+            if (response.status === 200) {
+              let blob = new Blob([response.data], {
+                type: response.headers['content-type']
+              });
+              const fileName = response.headers['content-disposition'];
+              const title = fileName && (fileName.indexOf('filename=') !== -1) ? fileName.split('=')[1] : 'download';
+              require('script-loader!file-saver');
+              saveAs(blob, title);
+            }
+          }).catch((error)=>{
             console.log(error)
             this.$notify.warning({
               title: '警告',
@@ -406,4 +510,5 @@
     padding: 10px 0;
     background-color: #f9fafc;
   }
+
 </style>
