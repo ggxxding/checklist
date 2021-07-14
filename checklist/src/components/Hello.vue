@@ -4,14 +4,27 @@
       title="测试用例清单"
       :visible.sync="drawer"
     size="50%">
-      <el-button type='primary' @click="downloadSuite"  style="margin-left:4%;margin-right:4%">导出并下载</el-button>
+      <el-button type='primary' @click="downloadSuite"  style="margin-left:4%;margin-right:1%">导出并下载</el-button>
+      <el-button type='primary' @click="uploadSuiteVisible=true"  >上传测试用例</el-button>
+      <el-button type='primary' @click="uploadPredVisible=true"  >上传模型预测</el-button>
       <el-collapse v-model="activeNames" style="margin-left:4%;margin-right:4%">
         <el-collapse-item  v-for="(suite,index) in suiteData" :key="index" :title="suite.name" :name="index">
-          <div>类型:{{suite.type}}</div>
+          <el-row>
+            <el-col :span="19"><div>类型:{{suite.type}}</div></el-col>
+            <el-col :span="4"><el-button  type="primary" size="small" style="float:right" @click="loadSentences(suite.name)">载入</el-button></el-col>
+          </el-row>
+          <el-row>
           <div>功能:{{suite.capability}}</div>
+          </el-row>
+          <el-row>
           <div>描述:{{suite.description}}</div>
+          </el-row>
+          <el-row>
           <div>标签:{{suite.labels}}</div>
+          </el-row>
+          <el-row>
           <div>数据:{{suite.data}}</div>
+          </el-row>
         </el-collapse-item>
       </el-collapse>
     </el-drawer>
@@ -26,6 +39,12 @@
         </el-form-item>
         <el-form-item label="名称" >
           <el-input v-model="suiteForm.name" autocomplete="off"></el-input>
+        </el-form-item>
+        <el-form-item v-show="suiteForm.type=='INV'" label="增加乱码" >
+          <el-switch v-model="suiteForm.addRandomStr"></el-switch>
+        </el-form-item>
+        <el-form-item v-show="suiteForm.addRandomStr==true" label="增加数量" >
+          <el-input v-model="suiteForm.addRandomStrNumber" ></el-input>
         </el-form-item>
         <el-form-item v-show="suiteForm.type=='MFT'" label="标签" >
           <el-input v-model="suiteForm.label" autocomplete="off" placeholder="请输入半角阿拉伯数字"></el-input>
@@ -48,6 +67,7 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
+
         <el-button @click="dialogFormVisible = false">取 消</el-button>
         <el-button type="primary" @click="addTestSuite()">确 定</el-button>
       </div>
@@ -69,9 +89,33 @@
           <el-button type="primary" @click="onSubmit()">查询模板</el-button>
           <el-button type="primary" @click="getSuggestion()">MASK建议</el-button>
           <el-button @click="addTemplate()">增加模板</el-button>
-          <el-button @click="resetTemplateForm()">重置</el-button>
         </el-form-item>
       </el-form>
+    </el-dialog>
+    <el-dialog title="上传测试用例" :visible.sync="uploadSuiteVisible">
+      <el-upload class="upload" drag action="/uploadSuite" multiple ref="upload"
+                 list-type="file"
+                 :show-file-list="false"
+                 :http-request="uploadSuite"
+      style="text-align:center">
+        <i class="el-icon-upload"></i>
+        <div class="el-upload__text">推荐以上传文件形式上传，将.pkl格式的套件拖到此处，或<em>点击上传</em></div>
+        <div class="el-upload__tip" slot="tip"></div>
+      </el-upload>
+
+    </el-dialog>
+    <el-dialog title="上传模型预测" :visible.sync="uploadPredVisible">
+      <el-upload class="upload" drag action="/uploadPred" multiple ref="upload"
+                 list-type="file"
+                 :show-file-list="false"
+                 :http-request="uploadPred"
+                 style="text-align:center">
+        <i class="el-icon-upload"></i>
+        <div class="el-upload__text">推荐以上传文件形式上传，将模型预测结果拖到此处，或<em>点击上传</em></div>
+        <div class="el-upload__tip" slot="tip"></div>
+      </el-upload>
+      <div>{{summary}}</div>
+
     </el-dialog>
     <el-row>
 
@@ -87,9 +131,11 @@
         :titles="['待选用例','测试用例']"
         v-model="value"
         :data="data"
+        @change="transferChange"
         @mouseover.native="transferAddTitle">
           <el-button class="transfer-footer" slot="left-footer" size="middle" @click="templateFormVisible = true">增加数据</el-button>
           <el-button class="transfer-footer" slot="right-footer" size="middle" @click="clearTemplates">清空数据</el-button>
+          <el-button class="transfer-footer" slot="right-footer" size="middle" @click="addToLexicon">加入词汇表</el-button>
       </el-transfer>
         </div>
       </el-col>
@@ -97,13 +143,10 @@
     <el-row>
       <el-form :inline="true"  class="demo-form-inline" style="float:right">
         <el-form-item>
-          <el-button type="primary" @click="clearTemplates" >清空</el-button>
-        </el-form-item>
-        <el-form-item>
           <el-button type="primary" @click="dialogFormVisible = true" >增加测试用例</el-button>
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="drawer = true" >查看测试用例</el-button>
+          <el-button type="primary" @click="drawer = true" >管理测试用例</el-button>
         </el-form-item>
       </el-form>
     </el-row>
@@ -115,7 +158,7 @@
             <el-input v-model="lexiconForm.key"  placeholder="例:country"></el-input>
           </el-form-item>
           <el-form-item label="词汇表内容">
-            <el-input type="textarea" :autosize="{ minRows: 1, maxRows: 8}" v-model="lexiconForm.lexiconList" placeholder='例: [good,great](英文逗号)'></el-input>
+            <el-input type="textarea" :autosize="{ minRows: 1, maxRows: 8}" v-model="lexiconForm.lexiconList" placeholder='例:北京 上海(空格分隔)'></el-input>
           </el-form-item>
           <el-form-item>
             <el-button type="primary"
@@ -176,6 +219,9 @@
         drawer: false,
         templateFormVisible: false,
         dialogFormVisible: false,
+        uploadSuiteVisible:false,
+        uploadPredVisible:false,
+        summary:'',
         suiteData: {},
         url:"http://192.168.71.214:5000/",
         templateForm:{
@@ -190,6 +236,8 @@
         suiteForm:{
           type:'',
           direction:'',
+          addRandomStr: false,
+          addRandomStrNumber: '5',
           tolerance:'0.1',
           name:'',
           label:'',
@@ -232,18 +280,32 @@
           })
       },
       addTemplate() {
-        this.templateForm.templates.push({
-          value: '',
-          key: Date.now()
-        });
+        if(this.data.length>0){
+          this.$notify.warning({
+            title: '警告',
+            message: '请清空待选用例后再改变模板数量'
+          });
+        }else{
+          this.templateForm.templates.push({
+            value: '',
+            key: Date.now()
+          });
+        }
       },
       resetTemplateForm(){
 
       },
       removeTemplate(item) {
-        var index = this.templateForm.templates.indexOf(item)
-        if (index !== -1) {
-          this.templateForm.templates.splice(index, 1)
+        if(this.data.length>0){
+          this.$notify.warning({
+            title: '警告',
+            message: '请清空待选用例后再改变模板数量'
+          });
+        }else{
+          var index = this.templateForm.templates.indexOf(item)
+          if (index !== -1) {
+            this.templateForm.templates.splice(index, 1)
+          }
         }
       },
       handleClick(tab, event) {
@@ -258,6 +320,71 @@
         this.data=[]
         this.value=[]
         this.count=0
+      },
+      addToLexicon(){
+        var words=[];
+        for(var i in this.value){
+          for(var j in this.data){
+            if(this.data[j].key==this.value[i]){
+              words.push(this.data[j].sentence);
+            }
+          }
+        }
+        console.log(words);
+        this.lexiconForm.lexiconList=words.join(' ')
+      },
+      transferChange(value, direction, movedKeys){
+        console.log(value, direction, movedKeys);
+        if (direction=='right'){
+          for(var i in movedKeys){
+            for(var j in this.data){
+              if(this.data[j].key==movedKeys[i]){
+                console.log('equal')
+                for(var k=1; k<=this.templateForm.templates.length; k++){
+                  if(this.data[Number(j)+k]!=undefined && this.data[Number(j)+k].label.split(':',2)[0]==this.data[j].label.split(':',2)[0]){
+                    if(!this.value.includes(Number(movedKeys[i])+k)) {
+                      this.value.push(Number(movedKeys[i]) + k)
+                    }
+                    console.log(this.value)
+                  }
+                  if(this.data[Number(j)-k]!=undefined && this.data[Number(j)-k].label.split(':',2)[0]==this.data[j].label.split(':',2)[0]){
+                    if(!this.value.includes(Number(movedKeys[i])-k)) {
+                      this.value.push(Number(movedKeys[i]) - k)
+                    }
+                    console.log(this.value)
+                  }
+                }
+              }
+            }
+          }
+        }else{
+          console.log('left')
+          for(var i in movedKeys){//遍历movedKey
+            for(var j in this.data){
+              if(this.data[j].key==movedKeys[i]){//data中找到和movedKey对应的data[j]
+                for(var k=1; k<=this.templateForm.templates.length; k++){
+                  if(this.data[Number(j)+k]!=undefined && this.data[Number(j)+k].label.split(':',2)[0]==this.data[j].label.split(':',2)[0]){
+                    for(var l in this.value){
+                      if(this.value[l]==this.data[Number(j)+k].key){
+                        this.value.splice(l,1)
+                        break
+                      }
+                    }
+                  }
+                  if(this.data[Number(j)-k]!=undefined && this.data[Number(j)-k].label.split(':',2)[0]==this.data[j].label.split(':',2)[0]){
+                    for(var l in this.value){
+                      if(this.value[l]==this.data[Number(j)-k].key){
+                        this.value.splice(l,1)
+                        break
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+        }
       },
       transferAddTitle(e){
         let dom = e.target;
@@ -306,6 +433,8 @@
             'direction': this.suiteForm.direction,
             'tolerance': this.suiteForm.tolerance,
             'name': this.suiteForm.name,
+            'addRandomStr': this.suiteForm.addRandomStr,
+            'addRandomStrNumber': this.suiteForm.addRandomStrNumber,
             'labels': this.suiteForm.label,
             'capability': this.suiteForm.capability,
           'description': this.suiteForm.description,
@@ -320,6 +449,7 @@
           this.suiteForm={
             type:'',
             name:'',
+            addRandomStr: false,
             label:'',
             description:'',
             capability:'',
@@ -452,8 +582,11 @@
         axios({
           method:'post',
           url:this.url+'downloadSuite',
+          responseType:'blob',
+          headers:{'Content-Type':'application/json;application/octet-stream'},
         })
           .then((response)=>{
+            console.log(response);
             if (response.status === 200) {
               let blob = new Blob([response.data], {
                 type: response.headers['content-type']
@@ -470,6 +603,106 @@
               message: `输出异常`
             });
           })
+      },
+      uploadSuite(param){
+        let fileObj = param.file; // 相当于input里取得的files
+        let data = new FormData(); // FormData 对象
+        let extension = fileObj.name.substring(fileObj.name.lastIndexOf('.') + 1)
+        let size = fileObj.size / 1024 / 1024
+        if (extension !== 'pkl') {
+          this.$notify.warning({
+            title: '警告',
+            message: `只能上传后缀是.pkl的文件`
+          });
+        } else if(size > 200) {
+          this.$notify.warning({
+            title: '警告',
+            message: `文件大小不得超过10M`
+          });
+        } else {
+          data.append("file", fileObj); // 文件对象
+          //data.append("name", this.regeditForm.name);
+          //data.append("description", this.regeditForm.description);
+          axios({
+            method: 'POST',
+            url: this.url+'uploadSuite',
+            data: data,
+            headers: {'Content-Type': 'multipart/form-data'}
+          }).then(response => {
+            this.$message.success("文件上传成功");
+            this.suiteData=response.data;
+            this.suiteForm={
+              type:'',
+              name:'',
+              addRandomStr: false,
+              label:'',
+              description:'',
+              capability:'',
+            };
+          }).catch((error) => {
+            // eslint-disable-next-line
+            console.error(error);
+          });
+        }
+      },
+      uploadPred(param){
+        let fileObj = param.file; // 相当于input里取得的files
+        let data = new FormData(); // FormData 对象
+        let extension = fileObj.name.substring(fileObj.name.lastIndexOf('.') + 1)
+        let size = fileObj.size / 1024 / 1024
+        if(size > 20) {
+          this.$notify.warning({
+            title: '警告',
+            message: `文件大小不得超过10M`
+          });
+        } else {
+          data.append("file", fileObj); // 文件对象
+          //data.append("name", this.regeditForm.name);
+          //data.append("description", this.regeditForm.description);
+          axios({
+            method: 'POST',
+            url: this.url+'uploadPred',
+            data: data,
+            headers: {'Content-Type': 'multipart/form-data'}
+          }).then(response => {
+            this.$message.success("文件上传成功");
+            console.log(typeof(response.data));
+            this.summary=response.data;
+
+          }).catch((error) => {
+            // eslint-disable-next-line
+            console.error(error);
+          });
+        }
+      },
+      loadSentences(suiteName){
+        console.log(suiteName)
+        console.log(this.suiteData[suiteName])
+        this.clearTemplates()
+        if(this.suiteData[suiteName].isPair == '0'){
+          for (var i in this.suiteData[suiteName].data) {
+            this.data.push({
+              label: this.count.toString()+":"+this.suiteData[suiteName].data[i],
+              key: this.count,
+              sentence: this.suiteData[suiteName].data[i],
+            })
+            this.count += 1
+          }
+        }else{
+          for (var i in this.suiteData[suiteName].data) {
+            console.log(this.suiteData[suiteName].data[i])
+            for (var j=0;j<this.suiteData[suiteName].data[i].length;j+=1) {
+
+              this.data.push({
+                label: (this.count-j).toString() + ":" + this.suiteData[suiteName].data[i][j],
+                key: this.count,
+                sentence: this.suiteData[suiteName].data[i][j],
+              })
+              this.count += 1
+            }
+
+          }
+        }
       },
     },
     components:{

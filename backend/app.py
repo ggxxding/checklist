@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, render_template, request , send_from_directory
 from flask_cors import CORS
-
-import os, json
+import string
+import os, json,sys
 import argparse
 import zipfile,time
 
@@ -30,6 +30,30 @@ class zip:
         zp.close()
         time.sleep(5)
         print('压缩完成')
+
+def loadSuite():
+    tempList = {}
+    for testName in suite.tests:
+        print(suite.tests[testName].labels, '--labels--')
+        print(suite.info[testName], '')
+        suite.tests[testName].name = testName
+        suite.tests[testName].type = suite.info[testName]['type']
+        suite.tests[testName].description = suite.info[testName]['description']
+        suite.tests[testName].capability = suite.info[testName]['capability']
+        if type(suite.tests[testName].data[0])==type([]):
+            isPair=1
+        else:
+            isPair=0
+
+        tempList[testName] = {'name': suite.tests[testName].name, 'type': suite.tests[testName].type,
+                              'data': suite.tests[testName].data,
+                              'labels': suite.tests[testName].labels,
+                              'capability': suite.tests[testName].capability,
+                              'description': suite.tests[testName].description,
+                              'isPair': isPair}
+    return jsonify(tempList)
+
+
 
 # 测试代码
 @app.route('/template', methods=['POST', 'GET'])
@@ -86,7 +110,7 @@ def addLexicon():
         data = request.get_json(silent=True)
         print(data['key'])
         print(data['lexiconList'])
-        lexiconList=data['lexiconList'][1:-1].split(',')
+        lexiconList=data['lexiconList'].strip().split(' ')
         editor.add_lexicon(data['key'],lexiconList, overwrite=True)
 
         tempDict=dict(editor.lexicons)
@@ -101,7 +125,7 @@ def addTestSuite():
         data = request.get_json(silent=True)
         type_=data['type']
         name=data['name']
-        labels=data['labels']
+
         capability=data['capability']
         description=data['description']
         sentences=data['sentences']
@@ -114,10 +138,36 @@ def addTestSuite():
                 if j['key']==i:
                     print(i,j,index1,index2)
                     finalSentences.append(j['sentence'])
-        if data['number']==1:
+
+        if data['addRandomStr']==True:
+
+            # add random string
+            def random_string(n):
+                return ''.join(np.random.choice([x for x in string.ascii_letters + string.digits], n))
+
+            def random_url(n=6):
+                return 'https://t.co/%s' % random_string(n)
+
+            def random_handle(n=6):
+                return '@%s' % random_string(n)
+
+            def add_irrelevant(sentence):
+                urls_and_handles = [random_url(n=6) for _ in range(int(data['addRandomStrNumber']))] + [random_handle() for _ in range(int(data['addRandomStrNumber']))]
+                irrelevant_before = ['@airline '] + urls_and_handles
+                irrelevant_after = urls_and_handles
+                rets = ['%s %s' % (x, sentence) for x in irrelevant_before]
+                rets += ['%s %s' % (sentence, x) for x in irrelevant_after]
+                return rets
+
+            t = Perturb.perturb(finalSentences, add_irrelevant, nsamples=500)
+            test = INV(t.data)
+            suite.add(test, name, capability, description)
+        elif data['number']==1:
+
             if type_=='MFT':
-                test=MFT(finalSentences, labels=labels)
+                test=MFT(finalSentences, labels=int(data['labels']))
                 suite.add(test, name, capability, description)
+
         elif data['number']==2:
             if type_=='MFT':
                 tempList=[]
@@ -126,7 +176,7 @@ def addTestSuite():
                     if index%2==0:
                         tempList.append([finalSentences[index],finalSentences[index+1]])
                 print(tempList)
-                test=MFT(tempList, labels=labels)
+                test=MFT(tempList, labels=int(data['labels']))
                 #MFT有templates参数，默认None，暂时不传入，后续考虑增加功能
                 suite.add(test,name,capability,description)
             elif type_=='DIR':
@@ -143,25 +193,21 @@ def addTestSuite():
                 test=DIR(tempList,monotonic_label)
                 print(data['tolerance'])
                 suite.add(test,name,capability,description)
+            elif type_ == 'INV':
+                tempList = []
+                for index, sent in enumerate(finalSentences):
+                    if index % 2 == 0:
+                        tempList.append([finalSentences[index], finalSentences[index + 1]])
+                test = INV(tempList)
+                suite.add(test, name, capability, description)
 
 
-        tempList={}
-        for testName in suite.tests:
-            print(dir(suite.tests[testName]))
-            print(suite.tests[testName].labels,'--labels--')
-            print(suite.info[testName],'')
-            suite.tests[testName].name=testName
-            suite.tests[testName].type = suite.info[testName]['type']
-            suite.tests[testName].description = suite.info[testName]['description']
-            suite.tests[testName].capability = suite.info[testName]['capability']
-            tempList[testName]={'name':suite.tests[testName].name,'type':suite.tests[testName].type,'data':suite.tests[testName].data,
-                                'labels':suite.tests[testName].labels,
-                           'capability':suite.tests[testName].capability,'description':suite.tests[testName].description}
-        return jsonify(tempList)
+        tempList=loadSuite()
+        return tempList
 
 @app.route('/downloadSuite', methods=['POST'])
 def downloadSuite():
-    suite.to_raw_file('test.txt')
+    suite.to_raw_file('test.txt',n=500,seed=1)
     suite.save('suite.pkl')
     z=zip()
     files=['./test.txt','./suite.pkl']
@@ -180,6 +226,49 @@ def downloadSuite():
         response.headers["Access-Control-Expose-Headers"] = "Content-disposition"
         print("response: ", response.headers)
         return response
+
+@app.route('/uploadSuite', methods=['POST'])
+def uploadSuite():
+    if request.method == 'POST':
+        file = request.files.get("file")
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp.pkl")
+        file.save(file_path)
+        global suite
+        suite = TestSuite.from_file(file_path)
+        tempList=loadSuite()
+        return tempList
+
+@app.route('/uploadPred', methods=['POST'])
+def uploadPred():
+    if request.method == 'POST':
+        file = request.files.get("file")
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], "tempPred")
+        file.save(file_path)
+        global suite
+        suite.run_from_file(file_path, overwrite=True)
+
+        suite.summary()
+
+        output = sys.stdout
+        outputfile = open('summary.txt', 'w')
+        sys.stdout = outputfile
+
+        suite.summary()
+
+        outputfile.close()
+        sys.stdout = output
+
+        tempList=''
+        with open('summary.txt','r') as f:
+            tempList+=f.read()
+
+
+        return jsonify(tempList)
+@app.route('/loadSentences',methods=['POST'])
+def loadSentences():
+    if request.method == 'POST':
+        tempList=loadSuite()
+        return tempList
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
