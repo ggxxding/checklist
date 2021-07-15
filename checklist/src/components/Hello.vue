@@ -322,16 +322,24 @@
         this.count=0
       },
       addToLexicon(){
-        var words=[];
-        for(var i in this.value){
-          for(var j in this.data){
-            if(this.data[j].key==this.value[i]){
-              words.push(this.data[j].sentence);
+        if(this.value.length==0){
+          this.$notify.warning({
+            title: '警告',
+            message: '测试用例为空，添加失败。'
+          });
+        }else {
+          var words = [];
+          for (var i in this.value) {
+            for (var j in this.data) {
+              if (this.data[j].key == this.value[i]) {
+                words.push(this.data[j].sentence);
+              }
             }
           }
+          console.log(words);
+          this.lexiconForm.lexiconList = words.join(' ')
+          this.$message.success("加入成功,请查看下方词汇表内容");
         }
-        console.log(words);
-        this.lexiconForm.lexiconList=words.join(' ')
       },
       transferChange(value, direction, movedKeys){
         console.log(value, direction, movedKeys);
