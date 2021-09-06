@@ -11,7 +11,10 @@
         <el-collapse-item  v-for="(suite,index) in suiteData" :key="index" :title="suite.name" :name="index">
           <el-row>
             <el-col :span="19"><div>类型:{{suite.type}}</div></el-col>
-            <el-col :span="4"><el-button  type="primary" size="small" style="float:right" @click="loadSentences(suite.name)">载入</el-button></el-col>
+            <el-col :span="4">
+              <el-button  type="primary" size="small" style="float:right" @click="loadSentences(suite.name)">载入</el-button>
+              <el-button  type="primary" size="small" style="float:right" @click="deleteSuite(suite.name)">删除</el-button>
+            </el-col>
           </el-row>
           <el-row>
           <div>功能:{{suite.capability}}</div>
@@ -40,10 +43,15 @@
         <el-form-item label="名称" >
           <el-input v-model="suiteForm.name" autocomplete="off"></el-input>
         </el-form-item>
-        <el-form-item v-show="suiteForm.type=='INV'" label="增加乱码" >
-          <el-switch v-model="suiteForm.addRandomStr"></el-switch>
+
+        <el-form-item v-show="suiteForm.type=='INV'" label="扰动类型" >
+          <el-select v-model="suiteForm.perturbType" placeholder="请选择">
+            <el-option label="增加乱码" value="addRandomStr"></el-option>
+            <el-option label="句末标点（用例请以中文句号或问号结尾）" value="punctuation"></el-option>
+          </el-select>
         </el-form-item>
-        <el-form-item v-show="suiteForm.addRandomStr==true" label="增加数量" >
+        
+        <el-form-item v-show="suiteForm.perturbType== 'addRandomStr'" label="增加数量" >
           <el-input v-model="suiteForm.addRandomStrNumber" ></el-input>
         </el-form-item>
         <el-form-item v-show="suiteForm.type=='MFT'" label="标签" >
@@ -114,7 +122,7 @@
         <div class="el-upload__text">推荐以上传文件形式上传，将模型预测结果拖到此处，或<em>点击上传</em></div>
         <div class="el-upload__tip" slot="tip"></div>
       </el-upload>
-      <div>{{summary}}</div>
+      <div style="white-space: pre-line">{{summary}}</div>
 
     </el-dialog>
     <el-row>
@@ -236,7 +244,7 @@
         suiteForm:{
           type:'',
           direction:'',
-          addRandomStr: false,
+          perturbType:'',
           addRandomStrNumber: '5',
           tolerance:'0.1',
           name:'',
@@ -441,7 +449,7 @@
             'direction': this.suiteForm.direction,
             'tolerance': this.suiteForm.tolerance,
             'name': this.suiteForm.name,
-            'addRandomStr': this.suiteForm.addRandomStr,
+            'perturbType': this.suiteForm.perturbType,
             'addRandomStrNumber': this.suiteForm.addRandomStrNumber,
             'labels': this.suiteForm.label,
             'capability': this.suiteForm.capability,
@@ -456,11 +464,14 @@
           this.suiteData=response.data;
           this.suiteForm={
             type:'',
-            name:'',
-            addRandomStr: false,
-            label:'',
-            description:'',
-            capability:'',
+              direction:'',
+            perturbType: '',
+              addRandomStrNumber: '5',
+              tolerance:'0.1',
+              name:'',
+              label:'',
+              description:'',
+              capability:'',
           };
         })
           .catch((error)=>{
@@ -641,11 +652,14 @@
             this.suiteData=response.data;
             this.suiteForm={
               type:'',
-              name:'',
-              addRandomStr: false,
-              label:'',
-              description:'',
-              capability:'',
+                direction:'',
+              perturbType: '',
+                addRandomStrNumber: '5',
+                tolerance:'0.1',
+                name:'',
+                label:'',
+                description:'',
+                capability:'',
             };
           }).catch((error) => {
             // eslint-disable-next-line
@@ -674,7 +688,7 @@
             headers: {'Content-Type': 'multipart/form-data'}
           }).then(response => {
             this.$message.success("文件上传成功");
-            console.log(typeof(response.data));
+            console.log(response.data);
             this.summary=response.data;
 
           }).catch((error) => {
@@ -711,6 +725,33 @@
 
           }
         }
+      },
+      deleteSuite(suiteName){
+        console.log(suiteName)
+        console.log(this.suiteData[suiteName])
+        axios({
+          method: 'POST',
+          url: this.url+'deleteSuite',
+          data: {'suiteName': suiteName},
+        }).then(response => {
+          this.$message.success("删除成功");
+          this.suiteData=response.data;
+          this.suiteForm={
+            type:'',
+              direction:'',
+            perturbType: '',
+              addRandomStrNumber: '5',
+              tolerance:'0.1',
+              name:'',
+              label:'',
+              description:'',
+              capability:'',
+          };
+
+        }).catch((error) => {
+          // eslint-disable-next-line
+          console.error(error);
+        });
       },
     },
     components:{

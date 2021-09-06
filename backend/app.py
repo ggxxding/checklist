@@ -10,6 +10,7 @@ from checklist.test_types import MFT,INV,DIR
 from checklist.expect import Expect
 from checklist.test_suite import TestSuite
 from checklist.perturb import Perturb
+import chinesePerturb
 import numpy as np
 
 editor = Editor(language='chinese')
@@ -130,7 +131,9 @@ def addTestSuite():
         description=data['description']
         sentences=data['sentences']
         value=data['value']
-
+        print(value)
+        value.sort()
+        print(value,'SORTED')
         finalSentences=[]
         print(data['number'],'number')
         for index1,i in enumerate(value):
@@ -139,7 +142,7 @@ def addTestSuite():
                     print(i,j,index1,index2)
                     finalSentences.append(j['sentence'])
 
-        if data['addRandomStr']==True:
+        if data['perturbType']== 'addRandomStr':
 
             # add random string
             def random_string(n):
@@ -162,6 +165,12 @@ def addTestSuite():
             t = Perturb.perturb(finalSentences, add_irrelevant, nsamples=500)
             test = INV(t.data)
             suite.add(test, name, capability, description)
+        elif data['perturbType']=='punctuation':
+            for index1,i in enumerate(finalSentences):
+                print(chinesePerturb.punctuation(finalSentences[index1]))
+                finalSentences[index1] = chinesePerturb.punctuation(finalSentences[index1])
+            test = INV(finalSentences)
+            suite.add(test, name, capability, description)
         elif data['number']==1:
 
             if type_=='MFT':
@@ -171,11 +180,11 @@ def addTestSuite():
         elif data['number']==2:
             if type_=='MFT':
                 tempList=[]
-                print(finalSentences)
+                print('finalSentences',finalSentences)
                 for index,sent in enumerate(finalSentences):
                     if index%2==0:
                         tempList.append([finalSentences[index],finalSentences[index+1]])
-                print(tempList)
+                print('tempList',tempList)
                 test=MFT(tempList, labels=int(data['labels']))
                 #MFT有templates参数，默认None，暂时不传入，后续考虑增加功能
                 suite.add(test,name,capability,description)
@@ -184,14 +193,16 @@ def addTestSuite():
                     monotonic_label=Expect.monotonic(increasing=True,tolerance= float(data['tolerance']))
                 elif data['direction']=='decreasing':
                     monotonic_label=Expect.monotonic(increasing=False,tolerance= float(data['tolerance']))
-                non_neutral_pred = lambda pred, *args, **kwargs: pred != 1
+                non_neutral_pred = lambda pred, *args, **kwargs: pred != 0.5
                 monotonic_label = Expect.slice_pairwise(monotonic_label, non_neutral_pred)
                 tempList=[]
+                print('finalSentences',finalSentences)
                 for index,sent in enumerate(finalSentences):
                     if index%2==0:
                         tempList.append([finalSentences[index],finalSentences[index+1]])
+                print('tempList',tempList)
                 test=DIR(tempList,monotonic_label)
-                print(data['tolerance'])
+                print('tolerance:',data['tolerance'])
                 suite.add(test,name,capability,description)
             elif type_ == 'INV':
                 tempList = []
@@ -264,9 +275,21 @@ def uploadPred():
 
 
         return jsonify(tempList)
+
+'''
 @app.route('/loadSentences',methods=['POST'])
 def loadSentences():
     if request.method == 'POST':
+        tempList=loadSuite()
+        return tempList
+'''
+
+@app.route('/deleteSuite',methods=['POST'])
+def deleteSuite():
+    if request.method == 'POST':
+        data = request.get_json(silent=True)
+        suiteName = data['suiteName']
+        suite.remove(suiteName)
         tempList=loadSuite()
         return tempList
 
