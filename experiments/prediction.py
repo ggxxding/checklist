@@ -30,7 +30,7 @@ if __name__ == "__main__":
     test_dataloader = DataLoader(dataset, batch_size=batch_size, shuffle = True)
 
     #load BERT
-    model = BertForSequenceClassification.from_pretrained('clue/roberta_chinese_base', num_labels=2, output_attentions=False, output_hidden_states=False)
+    model = BertForSequenceClassification.from_pretrained('bert-base-chinese', num_labels=2, output_attentions=False, output_hidden_states=False)
     model.load_state_dict(torch.load('./data/roberta-base-chinese-model.pt'))
     print('model loaded')
     model.cuda()

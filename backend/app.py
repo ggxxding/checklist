@@ -5,15 +5,36 @@ import os, json,sys
 import argparse
 import zipfile,time
 
+
 from checklist.editor import Editor
 from checklist.test_types import MFT,INV,DIR
 from checklist.expect import Expect
 from checklist.test_suite import TestSuite
 from checklist.perturb import Perturb
 import chinesePerturb
+from faker import Faker
 import numpy as np
 
+import time
+
 editor = Editor(language='chinese')
+religionList = ['基督教','犹太教','伊斯兰教','佛教','琐罗亚斯德教','印度教','锡克教','神道教','巴哈教','道教','儒家','耆那教','无神论','不可知论']
+editor.add_lexicon('religion',religionList, overwrite=True)
+last_name = [ "李", "王", "张", "刘", "陈", "杨", "吴", "黄", "周", "赵", "孙", "徐", "马", "林", "朱", "郭", "胡", "何",
+              "高", "梁", "郑", "罗", "许", "曹", "冯", "邓", "谢", "韩", "于", "宋", "葉", "唐", "蔡", "吕", "程", "曾",
+              "沈", "蒋", "董", "范", "田", "姚", "袁", "金", "白", "江", "姜", "谭", "丁", "杜", "彭", "方", "汪", "潘",
+              "陆", "苏", "任", "钱", "戴", "余", "侯", "石", "廖", "傅", "魏", "贾", "秦", "肖", "龚", "薛",
+              "夏", "关", "孟", "崔", "陶", "顾", "严", "毛", "雷", "孔", "阎", "黎", "邱", "邵", "常", "熊", "万", "章",
+              "郝", "贺", "尹", "倪", "洪", "汤", "施", "段", "葛", "邢" ]
+editor.add_lexicon('religion',last_name, overwrite=True)
+faker=Faker('zh_cn')
+first_name = list(set([faker.first_name() for i in range(100)]))
+first_name_male = list(set([faker.first_name_male() for i in range(50)]))
+first_name_female = list(set([faker.first_name_female() for i in range(50)]))
+editor.add_lexicon('first_name',first_name, overwrite=True)
+editor.add_lexicon('male',first_name_male, overwrite=True)
+editor.add_lexicon('female',first_name_female, overwrite=True)
+
 suite=TestSuite()
 
 app = Flask(__name__)
@@ -66,7 +87,11 @@ def template():
     if request.method == 'POST':
         data = request.get_json(silent=True)
         if(data['templates']==[]):
+
+            startt=time.time()
             ret = editor.template(data['template'], nsamples=int(data['number'])).data
+            endt=time.time()
+            print(endt-startt)
             res_dict={}
             for i in range(len(ret)):
                 res_dict[str(i)]=ret[i]
@@ -87,6 +112,8 @@ def getSuggestion():
     if request.method == 'POST':
         data = request.get_json(silent=True)
         res = editor.suggest(data['template'])[:int(data['number'])]
+
+
         res_dict={}
         for i in range(len(res)):
             res_dict[str(i)]=res[i]
@@ -136,13 +163,15 @@ def addTestSuite():
         print(value,'SORTED')
         finalSentences=[]
         print(data['number'],'number')
+        homoNum=data['homoNum']
+        generateNum=int(data['generateNum'])
         for index1,i in enumerate(value):
             for index2,j in enumerate(sentences):
                 if j['key']==i:
                     print(i,j,index1,index2)
                     finalSentences.append(j['sentence'])
 
-        if data['perturbType']== 'addRandomStr':
+        if type_=='INV' and data['perturbType']== 'addRandomStr':
 
             # add random string
             def random_string(n):
@@ -165,12 +194,32 @@ def addTestSuite():
             t = Perturb.perturb(finalSentences, add_irrelevant, nsamples=500)
             test = INV(t.data)
             suite.add(test, name, capability, description)
-        elif data['perturbType']=='punctuation':
+        elif type_=='INV' and data['perturbType']=='punctuation':
             for index1,i in enumerate(finalSentences):
                 print(chinesePerturb.punctuation(finalSentences[index1]))
                 finalSentences[index1] = chinesePerturb.punctuation(finalSentences[index1])
             test = INV(finalSentences)
             suite.add(test, name, capability, description)
+        elif type_=='INV' and data['perturbType']=='homophone':
+            for index1,i in enumerate(finalSentences):
+                tempList=[finalSentences[index1]]
+                while len(tempList)<generateNum+1:
+                    generateText = chinesePerturb.tokenPerturb(finalSentences[index1])
+                    if generateText not in tempList:
+                        tempList.append(generateText)
+                finalSentences[index1] = tempList
+
+            test = INV(finalSentences)
+            suite.add(test, name, capability, description)
+        elif type_=='INV' and data['perturbType']=='change_location':
+            loc_lexicon = editor.lexicons['city']+editor.lexicons['country']
+            for index1,i in enumerate(finalSentences):
+
+                finalSentences[index1] = chinesePerturb.change_location(finalSentences[index1], loc_lexicon)
+            test = INV(finalSentences)
+            suite.add(test, name, capability, description)
+
+
         elif data['number']==1:
 
             if type_=='MFT':

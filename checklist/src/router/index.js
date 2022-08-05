@@ -3,6 +3,7 @@ import Router from 'vue-router'
 import HelloWorld from '@/components/HelloWorld'
 import Hello from '@/components/Hello'
 import testt from '@/components/testt'
+import error from '@/components/error'
 
 Vue.use(Router)
 
@@ -17,7 +18,12 @@ export default new Router({
       path: '/ttest',
       name: 'test',
       component: testt
-    }
+    },
+    {
+      path: '/error',
+      name: 'error',
+      component: error
+    },
   ],
   mode: 'history'
 })

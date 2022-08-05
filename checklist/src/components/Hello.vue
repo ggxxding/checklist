@@ -42,15 +42,27 @@
         </el-form-item>
         <el-form-item label="名称" >
           <el-input v-model="suiteForm.name" autocomplete="off"></el-input>
-        </el-form-item>
+          </el-form-item>
 
-        <el-form-item v-show="suiteForm.type=='INV'" label="扰动类型" >
-          <el-select v-model="suiteForm.perturbType" placeholder="请选择">
-            <el-option label="增加乱码" value="addRandomStr"></el-option>
-            <el-option label="句末标点（用例请以中文句号或问号结尾）" value="punctuation"></el-option>
-          </el-select>
-        </el-form-item>
-        
+        <el-form :inline="true"  v-show="suiteForm.type=='INV'" class="demo-form-inline">
+          <el-form-item label="扰乱方式">
+            <el-select v-model="suiteForm.perturbType" placeholder="请选择">
+              <el-option label="增加乱码" value="addRandomStr"></el-option>
+              <el-option label="句末标点（用例请以中文句号或问号结尾）" value="punctuation"></el-option>
+              <el-option label="生成同音字" value="homophone"></el-option>
+              <el-option label="替换地名" value="change_location"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="同音字数量" v-show="suiteForm.perturbType=='homophone'">
+            <el-input v-model="suiteForm.homoNum"></el-input>
+          </el-form-item>
+          <el-form-item label="用例数量" v-show="suiteForm.perturbType=='homophone'">
+            <el-input v-model="suiteForm.generateNum"></el-input>
+          </el-form-item>
+        </el-form>
+
+
+
         <el-form-item v-show="suiteForm.perturbType== 'addRandomStr'" label="增加数量" >
           <el-input v-model="suiteForm.addRandomStrNumber" ></el-input>
         </el-form-item>
@@ -251,6 +263,8 @@
           label:'',
           description:'',
           capability:'',
+          homoNum:1,
+          generateNum:3,
         },
         data: generateData(),
         value: [],
@@ -457,6 +471,8 @@
           'sentences': this.data,
             'value': this.value,
             'number': this.templateForm.templates.length+1,
+            'homoNum': this.suiteForm.homoNum,
+            'generateNum': this.suiteForm.generateNum,
           },
         }).then((response)=>{
           this.$message.success("成功添加测试，可以点击”查看当前测试用例“按钮查看");
@@ -472,6 +488,8 @@
               label:'',
               description:'',
               capability:'',
+            homoNum:1,
+            generateNum:3,
           };
         })
           .catch((error)=>{
@@ -660,6 +678,8 @@
                 label:'',
                 description:'',
                 capability:'',
+              homoNum:1,
+              generateNum:3,
             };
           }).catch((error) => {
             // eslint-disable-next-line
@@ -668,6 +688,7 @@
         }
       },
       uploadPred(param){
+
         let fileObj = param.file; // 相当于input里取得的files
         let data = new FormData(); // FormData 对象
         let extension = fileObj.name.substring(fileObj.name.lastIndexOf('.') + 1)
@@ -746,6 +767,8 @@
               label:'',
               description:'',
               capability:'',
+            homoNum:1,
+            generateNum:3,
           };
 
         }).catch((error) => {
