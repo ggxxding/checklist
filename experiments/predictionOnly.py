@@ -12,7 +12,7 @@ from data_util import encode_fn
 device = torch.device('cuda')
 if __name__ == "__main__":
     batch_size=1
-    df=pd.read_csv('test220617.txt',header=None)
+    df=pd.read_csv('test220531.txt',header=None)
     all_input_ids = encode_fn(df[0].values)
     #labels = torch.tensor(df['label'].values)
 
@@ -48,4 +48,4 @@ if __name__ == "__main__":
     out=pd.DataFrame(out)
     out=out.astype({0:int})
     print(out)
-    out.to_csv('output220617.txt',sep=' ',header=None,index=False)
+    out.to_csv('output220531.txt',sep=' ',header=None,index=False)

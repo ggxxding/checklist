@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     #load BERT
     model = BertForSequenceClassification.from_pretrained('bert-base-chinese', num_labels=2, output_attentions=False, output_hidden_states=False)
-    model.load_state_dict(torch.load('./data/roberta-base-chinese-model.pt'))
+    model.load_state_dict(torch.load('./data/bert-base-chinese-model.pt'))
     print('model loaded')
     model.cuda()
     model.eval()

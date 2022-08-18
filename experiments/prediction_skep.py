@@ -68,10 +68,24 @@ def main():
     out=pd.DataFrame(out)
     out=out.astype({0:int})
     out.to_csv('output_skep_220531.txt', sep=' ', header=None, index=False)
-
-    df=pd.read_csv('test_10cats.csv')
-    texts=df['review'].values
-    labels = df['label'].values
+    # 测试skep在cats10的准确率
+    # df=pd.read_csv('test_10cats.csv')
+    # texts=df['review'].values
+    # labels = df['label'].values
+    #
+    # count = 0
+    # correct = 0
+    # for text in texts:
+    #     result = classifier.predict(text)
+    #     if result[0][1] == 'positive' and labels[count]==1:
+    #         correct+=1
+    #     elif result[0][1] == 'negative' and labels[count]==0:
+    #         correct+=1
+    #     count+=1
+    #
+    # print('acc:',correct/count)
+    # print('count:',count)
+    # print('correct:',correct)
 
 
 if __name__ == '__main__':
