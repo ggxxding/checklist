@@ -26,7 +26,7 @@ last_name = [ "李", "王", "张", "刘", "陈", "杨", "吴", "黄", "周", "�
               "陆", "苏", "任", "钱", "戴", "余", "侯", "石", "廖", "傅", "魏", "贾", "秦", "肖", "龚", "薛",
               "夏", "关", "孟", "崔", "陶", "顾", "严", "毛", "雷", "孔", "阎", "黎", "邱", "邵", "常", "熊", "万", "章",
               "郝", "贺", "尹", "倪", "洪", "汤", "施", "段", "葛", "邢" ]
-editor.add_lexicon('religion',last_name, overwrite=True)
+editor.add_lexicon('last_name',last_name, overwrite=True)
 faker=Faker('zh_cn')
 first_name = list(set([faker.first_name() for i in range(100)]))
 first_name_male = list(set([faker.first_name_male() for i in range(50)]))
