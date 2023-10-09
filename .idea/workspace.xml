@@ -44,7 +44,7 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../AI-public-opinion-perception" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunManager">
@@ -109,6 +109,9 @@
       <workItem from="1659076464838" duration="152000" />
       <workItem from="1660715734913" duration="1645000" />
       <workItem from="1660720835261" duration="6146000" />
+      <workItem from="1667225655474" duration="43000" />
+      <workItem from="1672882762826" duration="154000" />
+      <workItem from="1672882928686" duration="1199000" />
     </task>
     <servers />
   </component>
@@ -128,29 +131,9 @@
     <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="740" y="286" key="FileChooserDialogImpl" timestamp="1655779115750">
+    <state x="653" y="293" key="FileChooserDialogImpl" timestamp="1672900371160">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="740" y="286" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1655779115750" />
-    <state width="1877" height="282" key="GridCell.Tab.0.bottom" timestamp="1654137001036">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="282" key="GridCell.Tab.0.bottom/0.0.1920.1040@0.0.1920.1040" timestamp="1654137001036" />
-    <state width="1877" height="282" key="GridCell.Tab.0.center" timestamp="1654137001035">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="282" key="GridCell.Tab.0.center/0.0.1920.1040@0.0.1920.1040" timestamp="1654137001035" />
-    <state width="1877" height="282" key="GridCell.Tab.0.left" timestamp="1654137001035">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="282" key="GridCell.Tab.0.left/0.0.1920.1040@0.0.1920.1040" timestamp="1654137001035" />
-    <state width="1877" height="282" key="GridCell.Tab.0.right" timestamp="1654137001036">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state width="1877" height="282" key="GridCell.Tab.0.right/0.0.1920.1040@0.0.1920.1040" timestamp="1654137001036" />
-    <state x="461" y="164" key="SettingsEditor" timestamp="1657608047237">
-      <screen x="0" y="0" width="1920" height="1040" />
-    </state>
-    <state x="461" y="164" key="SettingsEditor/0.0.1920.1040@0.0.1920.1040" timestamp="1657608047237" />
+    <state x="653" y="293" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1672900371160" />
   </component>
 </project>

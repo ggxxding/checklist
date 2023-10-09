@@ -1,5 +1,6 @@
 <template>
   <div>
+  <boldHeader></boldHeader>
     <el-drawer
       title="测试用例清单"
       :visible.sync="drawer"
@@ -203,6 +204,7 @@
 
 <script>
   import axios from 'axios';
+  import boldHeader from './boldHeader';
   export default {
     name: 'Hello',
     data() {
@@ -778,6 +780,7 @@
       },
     },
     components:{
+      boldHeader,
 
     }
   }
