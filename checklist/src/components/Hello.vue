@@ -217,7 +217,7 @@
         const tempLexicon = [];
         axios({
           method:'post',
-          url:'http://192.168.71.214:5000/loadLexicons',
+          url:'http://localhost:5000/loadLexicons',
         }).then((response)=>{
           console.log(response.data);
           for (var key in response.data){
@@ -245,7 +245,7 @@
         uploadPredVisible:false,
         summary:'',
         suiteData: {},
-        url:"http://192.168.71.214:5000/",
+        url:"http://localhost:5000/",
         templateForm:{
           template:'',
           templates: [],

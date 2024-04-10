@@ -22,7 +22,7 @@
         return {
           showAcc: true,
           inputAnswer: false,
-          url:"http://192.168.71.214:5000/face_forgery",
+          url:"http://localhost:5000/face_forgery",
           useLarge: false,
           form: {
             picurl:'',
