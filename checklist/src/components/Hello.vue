@@ -788,7 +788,7 @@
 </script>
 <style>
   .el-transfer-panel{
-    width:40%;
+    width:750px;
   }
   .el-transfer__buttons{
     width:15%;
