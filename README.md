@@ -1,6 +1,7 @@
 # checklist
 
 requirement:
+python 3.6
 
 checklist 0.0.10
 
